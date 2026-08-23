@@ -52,4 +52,5 @@ public:
 	std::vector<WebButtonInfo> m_webButtonInfos;
 	std::vector<CString> m_excludedPrograms;
 	CString m_ocrPythonPath;
+	CString m_ocrEngine;
 };

@@ -3,7 +3,7 @@
 ; Output: E:\Textify_Project\installer\TextifyOCR_Setup.exe
 
 #define MyAppName "TextifyOCR"
-#define MyAppVersion "2.1.0"
+#define MyAppVersion "2.2.0"
 #define MyAppPublisher "TextifyOCR (m417z) + RapidOCR"
 #define MyAppExeName "TextifyOCR.exe"
 #define MyAppURL "https://github.com/m417z/Textify"
@@ -54,6 +54,9 @@ Source: "E:\Textify_Project\res\icons\*"; DestDir: "{app}\icons"; Flags: ignorev
 Source: "E:\Textify_Project\build_x64\ocr_helper.py"; DestDir: "{app}"; Flags: ignoreversion
 ; Self-contained OCR engine (PyInstaller onedir, includes ONNX models, ~260 MB)
 Source: "E:\Textify_Project\build_x64\ocr_helper\*"; DestDir: "{app}\ocr_helper"; Flags: ignoreversion recursesubdirs createallsubdirs
+; OCR engine plugins (selectable from the main dialog's dropdown).
+; Each plugin folder ships its own dependencies, models and engines.
+Source: "E:\Textify_Project\plugins\*"; DestDir: "{app}\plugins"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

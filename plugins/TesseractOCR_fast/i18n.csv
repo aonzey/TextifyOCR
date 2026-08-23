@@ -1,0 +1,14 @@
+key,en_US,zh_TW,ja_JP
+TesseractOCR（本地）,TesseractOCR (Local),TesseractOCR（本地）,TesseractOCR（ローカル）
+数学公式,Mathematical Formulas,數學公式,数学式
+置信度下限,Confidence Threshold,置信度下限,信頼度のしきい値
+识别数据中低于该置信度的内容将会被丢弃(输入范围:0~100),The content with confidence lower than this threshold will be discarded (Input range: 0~100),識別數據中低於該置信度的內容將會被丟棄（輸入範圍：0~100）,このしきい値より低い信頼度のコンテンツは破棄されます（入力範囲：0〜100）
+语言,Language,語言,言語
+请在仅当文本内容包含多语言时再勾选额外识别语言，否则可能会出现识别精度下降问题。,Please check the extra recognition language only when the text content contains multiple languages or the recognition accuracy may be reduced.,僅當文本內容包含多語言時再勾選額外識別語言，否則可能會出現識別精度下降問題。,テキストに複数の言語が含まれている場合にのみ、追加の認識言語をチェックしてください。それ以外の場合、認識精度が低下する可能性があります。
+自动识别排版,Auto detect the layout,自動識別排版,レイアウトの自動検出
+"除非图像中只有一句文本，否则应保持开启。
+同时，建议将[排版解析方案]设为“不做处理”。","Unless there is only one sentence of text in the image, it should remain open.
+And, it is recommended to set the [Layout Analysis Scheme] to ""No processing"".","除非影像中只有一句文字，否則應保持開啟。
+同時，建議將[排版解析方案]設為“不做處理”。","画像にテキストの文が1つしかない限り、開いたままにしておく必要があります。
+また、［組版解析スキーム］を「処理しない」にすることをお勧めします。"
+开启竖版识别,Enable vertical text recognition,開啟豎版識別,垂直テキスト認識を有効にする

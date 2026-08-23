@@ -47,6 +47,7 @@ public:
 		COMMAND_HANDLER_EX(IDC_CHECK_ALT, BN_CLICKED, OnConfigChanged)
 		COMMAND_HANDLER_EX(IDC_CHECK_SHIFT, BN_CLICKED, OnConfigChanged)
 		COMMAND_HANDLER_EX(IDC_COMBO_KEYS, CBN_SELCHANGE, OnConfigChanged)
+		COMMAND_HANDLER_EX(IDC_COMBO_OCR_ENGINE, CBN_SELCHANGE, OnOcrEngineChanged)
 		MESSAGE_HANDLER_EX(UWM_MOUSEHOOKCLICKED, OnMouseHookClicked)
 		MESSAGE_HANDLER_EX(m_uTaskbarCreatedMsg, OnTaskbarCreated)
 		MESSAGE_HANDLER_EX(m_uTextifyMsg, OnCustomTextifyMsg)
@@ -69,6 +70,7 @@ public:
 	void OnShowIni(UINT uNotifyCode, int nID, CWindow wndCtl);
 	void OnExitButton(UINT uNotifyCode, int nID, CWindow wndCtl);
 	void OnOcrButton(UINT uNotifyCode, int nID, CWindow wndCtl);
+	void OnOcrEngineChanged(UINT uNotifyCode, int nID, CWindow wndCtl);
 	void OnConfigChanged(UINT uNotifyCode, int nID, CWindow wndCtl);
 	LRESULT OnMouseHookClicked(UINT uMsg, WPARAM wParam, LPARAM lParam);
 	LRESULT OnTaskbarCreated(UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -86,6 +88,7 @@ private:
 	void UninitMouseAndKeyboardHotKeys();
 	bool RegisterConfiguredKeybdHotKey(const HotKey& keybdHotKey);
 	void StartOcrCapture();
+	void InitOcrEngineCombo();
 	CString RunOcrRecognition(const CString& imagePath);
 	void ShowOcrResult(const CString& ocrText, CPoint ptScreen);
 	void ConfigToGui();
@@ -106,4 +109,5 @@ private:
 	bool m_closeWhenUpdateCheckDone = false;
 	bool m_registeredOcrHotKey = false;
 	std::unique_ptr<COcrCapture> m_ocrCapture;
+	std::vector<CString> m_ocrEngineDirs; // index 0 = built-in engine
 };

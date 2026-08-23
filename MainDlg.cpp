@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <algorithm>
 
 #include "MainDlg.h"
 #include "TextDlg.h"
@@ -490,6 +491,10 @@ void CMainDlg::ApplyUiLanguage()
 
 	str.LoadString(IDS_MAINDLG_OCR);
 	SetDlgItemText(IDC_OCR, str);
+
+	// Populate the OCR engine combo box (below the OCR button). Called here
+	// so the default entry is translated along with the rest of the UI.
+	InitOcrEngineCombo();
 }
 
 void CMainDlg::ApplyMouseAndKeyboardHotKeys()
@@ -699,6 +704,115 @@ void CMainDlg::OnOcrButton(UINT uNotifyCode, int nID, CWindow wndCtl)
 	StartOcrCapture();
 }
 
+void CMainDlg::InitOcrEngineCombo()
+{
+	CComboBox combo(GetDlgItem(IDC_COMBO_OCR_ENGINE));
+
+	combo.ResetContent();
+	m_ocrEngineDirs.clear();
+
+	// Entry 0: the built-in RapidOCR engine
+	CString str;
+	str.LoadString(IDS_MAINDLG_OCR_ENGINE_DEFAULT);
+	combo.AddString(str);
+	m_ocrEngineDirs.emplace_back();
+
+	// Scan the plugins directory for Umi-OCR style OCR plugins (a folder
+	// with __init__.py exposing PluginInfo). Look in two places: alongside
+	// the exe (installed layout: <app>\TextifyOCR.exe + <app>\plugins\)
+	// and one level up (development layout: build_x64\TextifyOCR.exe +
+	// parent\plugins\).
+	CPath modulePath;
+	GetModuleFileName(NULL, modulePath.m_strPath.GetBuffer(MAX_PATH), MAX_PATH);
+	modulePath.m_strPath.ReleaseBuffer();
+	modulePath.RemoveFileSpec();
+
+	std::vector<CString> scanned;
+	auto tryScan = [&](const CString& dir)
+	{
+		if(std::find(scanned.begin(), scanned.end(), dir) != scanned.end())
+			return;
+		scanned.push_back(dir);
+
+		WIN32_FIND_DATA findData = {};
+		HANDLE hFind = FindFirstFile(dir + L"\\*", &findData);
+		if(hFind == INVALID_HANDLE_VALUE)
+			return;
+
+		do
+		{
+			if(!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+				continue;
+
+			if(wcscmp(findData.cFileName, L".") == 0 || wcscmp(findData.cFileName, L"..") == 0)
+				continue;
+
+			CString initPath = dir + L"\\" + findData.cFileName + L"\\__init__.py";
+			DWORD attr = GetFileAttributes(initPath);
+			if(attr == INVALID_FILE_ATTRIBUTES || (attr & FILE_ATTRIBUTE_DIRECTORY))
+				continue;
+
+			// De-duplicate against plugins already loaded from earlier
+			// locations.
+			bool already = false;
+			for(const auto& existing : m_ocrEngineDirs)
+			{
+				if(existing.CompareNoCase(findData.cFileName) == 0)
+				{
+					already = true;
+					break;
+				}
+			}
+			if(already)
+				continue;
+
+			m_ocrEngineDirs.push_back(CString(findData.cFileName));
+			combo.AddString(CString(findData.cFileName));
+		} while(FindNextFile(hFind, &findData));
+
+		FindClose(hFind);
+	};
+
+	tryScan(modulePath.m_strPath + L"\\plugins");
+	CPath parentPath = modulePath;
+	parentPath.RemoveFileSpec();
+	if(_wcsicmp(parentPath.m_strPath, modulePath.m_strPath) != 0)
+	{
+		tryScan(parentPath.m_strPath + L"\\plugins");
+	}
+
+	// Restore the selection from the config; fall back to the built-in
+	// engine when the configured plugin no longer exists.
+	int select = 0;
+	if(m_config && !m_config->m_ocrEngine.IsEmpty())
+	{
+		for(size_t i = 0; i < m_ocrEngineDirs.size(); i++)
+		{
+			if(m_ocrEngineDirs[i].CompareNoCase(m_config->m_ocrEngine) == 0)
+			{
+				select = static_cast<int>(i);
+				break;
+			}
+		}
+	}
+
+	combo.SetCurSel(select);
+}
+
+void CMainDlg::OnOcrEngineChanged(UINT uNotifyCode, int nID, CWindow wndCtl)
+{
+	if(!m_config)
+		return;
+
+	CComboBox combo(GetDlgItem(IDC_COMBO_OCR_ENGINE));
+	int sel = combo.GetCurSel();
+	if(sel < 0 || sel >= static_cast<int>(m_ocrEngineDirs.size()))
+		return;
+
+	m_config->m_ocrEngine = m_ocrEngineDirs[sel];
+	m_config->SaveToIniFile();
+}
+
 void CMainDlg::StartOcrCapture()
 {
 	if(m_ocrCapture)
@@ -817,23 +931,51 @@ CString CMainDlg::RunOcrRecognition(const CString& imagePath)
 	if(pythonPath.IsEmpty())
 		pythonPath = L"python.exe";
 
+	// Selected OCR engine: "" = built-in RapidOCR, otherwise a plugin folder
+	// name under plugins\. Fall back to the built-in engine if the plugin
+	// has been removed since it was selected.
+	CString engineName;
+	if(m_config && !m_config->m_ocrEngine.IsEmpty())
+	{
+		auto hasPlugin = [&](const CString& base) -> bool
+		{
+			CString initPath = base + L"\\plugins\\" + m_config->m_ocrEngine + L"\\__init__.py";
+			DWORD attr = GetFileAttributes(initPath);
+			return attr != INVALID_FILE_ATTRIBUTES && !(attr & FILE_ATTRIBUTE_DIRECTORY);
+		};
+
+		if(hasPlugin(modulePath.m_strPath))
+		{
+			engineName = m_config->m_ocrEngine;
+		}
+		else
+		{
+			CPath parentPath = modulePath;
+			parentPath.RemoveFileSpec();
+			if(_wcsicmp(parentPath.m_strPath, modulePath.m_strPath) != 0 && hasPlugin(parentPath.m_strPath))
+			{
+				engineName = m_config->m_ocrEngine;
+			}
+		}
+	}
+
 	// Build the command line.
-	// Direct exe mode: "ocr_helper.exe" "image_path" (the helper already
-	// forces UTF-8 on stdout).
-	// Python mode: python.exe -X utf8 script.py image_path — -X utf8 forces
-	// Python to use UTF-8 for stdout even when piped (otherwise Python uses
-	// the ANSI code page, e.g. GBK on Chinese Windows, which garbles the
-	// Chinese OCR text on our UTF-8 side).
+	// Direct exe mode: "ocr_helper.exe" "image_path" "engine"
+	// (the helper already forces UTF-8 on stdout).
+	// Python mode: python.exe -X utf8 script.py image_path engine — -X utf8
+	// forces Python to use UTF-8 for stdout even when piped (otherwise
+	// Python uses the ANSI code page, e.g. GBK on Chinese Windows, which
+	// garbles the Chinese OCR text on our UTF-8 side).
 	CString commandLine;
 	if(useDirectExe)
 	{
-		commandLine.Format(L"\"%s\" \"%s\"",
-			pythonPath.GetString(), imagePath.GetString());
+		commandLine.Format(L"\"%s\" \"%s\" \"%s\"",
+			pythonPath.GetString(), imagePath.GetString(), engineName.GetString());
 	}
 	else
 	{
-		commandLine.Format(L"\"%s\" -X utf8 \"%s\" \"%s\"",
-			pythonPath.GetString(), scriptPath.GetString(), imagePath.GetString());
+		commandLine.Format(L"\"%s\" -X utf8 \"%s\" \"%s\" \"%s\"",
+			pythonPath.GetString(), scriptPath.GetString(), imagePath.GetString(), engineName.GetString());
 	}
 
 	// Create pipes for stdout

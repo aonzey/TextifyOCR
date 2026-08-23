@@ -88,6 +88,11 @@ bool UserConfig::LoadFromIniFile()
 	GetPrivateProfileString(L"ocr", L"python_path", L"", szBuffer, ARRAYSIZE(szBuffer), iniFilePath);
 	m_ocrPythonPath = szBuffer;
 
+	// OCR engine: "" = built-in RapidOCR, otherwise a plugin folder name
+	// under plugins\ (e.g. "RapidOCR-json")
+	GetPrivateProfileString(L"ocr", L"engine", L"", szBuffer, ARRAYSIZE(szBuffer), iniFilePath);
+	m_ocrEngine = szBuffer;
+
 	m_uiLanguage = static_cast<LANGID>(GetPrivateProfileInt(L"config", L"ui_language", 0, iniFilePath));
 	m_checkForUpdates = GetPrivateProfileInt(L"config", L"check_for_updates", 1, iniFilePath);
 	m_autoCopySelection = GetPrivateProfileInt(L"config", L"auto_copy_selection", 0, iniFilePath);
@@ -200,6 +205,10 @@ bool UserConfig::SaveToIniFile() const
 
 	str.Format(L"%d", m_ocrHotKey.shift ? 1 : 0);
 	if(!WritePrivateProfileString(L"ocr", L"shift", str, iniFilePath))
+		succeeded = false;
+
+	// Save the selected OCR engine ("" = built-in)
+	if(!WritePrivateProfileString(L"ocr", L"engine", m_ocrEngine, iniFilePath))
 		succeeded = false;
 
 	// Don't write the other configuration, as there's no GUI for it.

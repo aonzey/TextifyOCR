@@ -255,3 +255,6 @@ test_steps.log
 
 # Local runtime config (TextifyOCR.ini derives from exe name; template is Textify.ini.example)
 res/Textify.ini
+# Python bytecode cache
+__pycache__/
+*.pyc
