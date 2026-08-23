@@ -1,0 +1,55 @@
+#pragma once
+
+struct HotKey
+{
+	int key;
+	bool ctrl;
+	bool alt;
+	bool shift;
+};
+
+struct WebButtonInfo
+{
+	CString command;
+	CString name;
+	CPath iconPath;
+	int iconIndex;
+	WCHAR acceleratorKey;
+	int width;
+	int height;
+};
+
+enum class TextRetrievalMethod
+{
+	defaultMethod,
+	msaa,
+	uia
+};
+
+class UserConfig
+{
+public:
+	UserConfig();
+
+	bool LoadFromIniFile();
+	bool SaveToIniFile() const;
+
+	HotKey m_mouseHotKey;
+	HotKey m_keybdHotKey;
+	HotKey m_ocrHotKey;
+	LANGID m_uiLanguage;
+	bool m_checkForUpdates;
+	bool m_autoCopySelection;
+	bool m_hideWndOnStartup;
+	bool m_hideTrayIcon;
+	bool m_textBoxNonResiable;
+	CString m_fontName;
+	int m_fontSize;
+	bool m_unicodeSpacesToAscii;
+	TextRetrievalMethod m_textRetrievalMethod;
+	int m_webButtonsIconSize;
+	int m_webButtonsPerRow;
+	std::vector<WebButtonInfo> m_webButtonInfos;
+	std::vector<CString> m_excludedPrograms;
+	CString m_ocrPythonPath;
+};
