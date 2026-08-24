@@ -5,6 +5,6 @@ Added OCR functionality based on Textify.
 
 A small tool which allows to copy text from dialogs and controls which don’t allow it otherwise.
 
-[🏠 Homepage](https://ramensoftware.com/textify)
+TextifyOriginal position(Textify原版位置):[🏠 Homepage](https://ramensoftware.com/textify)
 
 ![Screenshot](screenshot.jpg)
