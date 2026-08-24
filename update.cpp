@@ -267,8 +267,8 @@ void UpdateTaskDialog(HWND hWnd, char* pVersion)
 	sUserStruct.bRunElevated = !CanAccessFolder(sUserStruct.szSetupPath, GENERIC_READ | GENERIC_WRITE);
 
 	sUserStruct.bDownloading = FALSE;
-	sUserStruct.pHost = L"ramensoftware.com";
-	sUserStruct.pPath = L"/downloads/textify_setup.exe";
+	sUserStruct.pHost = L"github.com";
+	sUserStruct.pPath = L"/aonzey/TextifyOCR/releases";
 
 	tdcTaskDialogConfig.lpCallbackData = (LONG_PTR)&sUserStruct;
 
