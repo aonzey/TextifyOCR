@@ -184,7 +184,7 @@ void UpdateTaskDialog(HWND hWnd, char* pVersion)
 
 		if(MessageBox(hWnd, text, title, MB_ICONINFORMATION | MB_OKCANCEL) == IDOK)
 		{
-			const WCHAR* url = L"https://ramensoftware.com/textify";
+			const WCHAR* url = L"https://github.com/aonzey/TextifyOCR";
 
 			if((int)(UINT_PTR)ShellExecute(hWnd, NULL, url, NULL, NULL, SW_SHOWNORMAL) <= 32)
 			{
