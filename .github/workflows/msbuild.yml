@@ -11,9 +11,6 @@ env:
   BUILD_CONFIGURATION: Release
   BUILD_PLATFORM: x64
 
-permissions:
-  contents: write
-
 jobs:
   build:
     runs-on: windows-2022
@@ -31,47 +28,10 @@ jobs:
       run: nuget restore Textify.sln
 
     - name: Build
-      shell: pwsh
-      run: |
-        msbuild /m /p:Configuration=$env:BUILD_CONFIGURATION /p:Platform=$env:BUILD_PLATFORM Textify.sln /v:n > build.log 2>&1
-        $code = $LASTEXITCODE
-        if ($code -ne 0) { exit $code }
+      run: msbuild /m /p:Configuration=${{ env.BUILD_CONFIGURATION }} /p:Platform="${{ env.BUILD_PLATFORM }}" Textify.sln
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v5
       with:
         name: TextifyOCR-x64
         path: x64\Release\TextifyOCR.exe
-
-    - name: Dump build log on failure
-      if: failure()
-      shell: pwsh
-      env:
-        GH_TOKEN: ${{ github.token }}
-        REPO: ${{ github.repository }}
-      run: |
-        $prefix = "#" + "#[error]"
-        $logFile = "build.log"
-        $full = "ci-debug-full.log"
-        if (Test-Path $logFile) { Copy-Item $logFile $full -Force } else { "build.log missing" | Out-File $full }
-        "=== packages dir ===" | Out-File $full -Append
-        if (Test-Path packages) { Get-ChildItem packages -Recurse -Name | Out-File $full -Append } else { "packages dir MISSING" | Out-File $full -Append }
-        "=== workspace root ===" | Out-File $full -Append
-        Get-ChildItem -Name | Out-File $full -Append
-        $errs = Select-String -Path $full -Pattern "error |error:|fatal|cannot|错误|失败|MSB[0-9]" | Select-Object -First 8
-        $i = 0
-        foreach ($e in $errs) {
-          $m = $e.Line.Trim()
-          if ($m.Length -gt 400) { $m = $m.Substring(0, 400) }
-          Write-Output "$prefix E$i $m"
-          $i++
-        }
-        $b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($full))
-        $sha = $null
-        try { $sha = (Invoke-RestMethod -Uri "https://api.github.com/repos/$env:REPO/contents/ci-debug/build.log" -Headers @{ Authorization = "Bearer $env:GH_TOKEN" }).sha } catch {}
-        $body = @{ message = "ci debug log [skip ci]"; content = $b64; branch = "main" }
-        if ($sha) { $body["sha"] = $sha }
-        try {
-          Invoke-RestMethod -Uri "https://api.github.com/repos/$env:REPO/contents/ci-debug/build.log" -Method Put -Headers @{ Authorization = "Bearer $env:GH_TOKEN"; Accept = "application/vnd.github+json" } -Body ($body | ConvertTo-Json) -ContentType "application/json" | Out-Null
-        } catch { Write-Output "$prefix upload failed: $($_.Exception.Message)" }
-        exit 0
