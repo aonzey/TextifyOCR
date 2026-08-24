@@ -15,23 +15,43 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
+    - name: Checkout
+      uses: actions/checkout@v5
 
-      - name: Setup NuGet
-        uses: nuget/setup-nuget@v2
+    - name: Setup NuGet
+      uses: nuget/setup-nuget@v2
 
-      - name: Add MSBuild to PATH
-        uses: microsoft/setup-msbuild@v2
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v2
 
-      - name: Restore NuGet Packages
-        run: nuget restore Textify.sln
+    - name: Restore NuGet Packages
+      run: nuget restore Textify.sln
 
-      - name: Build
-        run: msbuild /m /p:Configuration=${{ env.BUILD_CONFIGURATION }} /p:Platform="${{ env.BUILD_PLATFORM }}" Textify.sln
+    - name: Diagnose restore
+      shell: pwsh
+      run: |
+        "# Restore diagnosis" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+        "packages dir exists: $(Test-Path packages)" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+        if (Test-Path packages) {
+          Get-ChildItem packages -Recurse -Depth 1 -Name | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+        }
 
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v5
-        with:
-          name: TextifyOCR-x64
-          path: x64\Release\TextifyOCR.exe
+    - name: Build
+      shell: pwsh
+      run: |
+        msbuild /m /p:Configuration=$env:BUILD_CONFIGURATION /p:Platform=$env:BUILD_PLATFORM Textify.sln /v:n > build.log 2>&1
+        $code = $LASTEXITCODE
+        Get-Content build.log | Select-Object -Last 80
+        if ($code -ne 0) {
+          "# Build failed (exit $code)" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "``````" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          Select-String -Path build.log -Pattern "error|错误" | Select-Object -First 30 | ForEach-Object { $_.Line } | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "``````" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          exit $code
+        }
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v5
+      with:
+        name: TextifyOCR-x64
+        path: x64\Release\TextifyOCR.exe
