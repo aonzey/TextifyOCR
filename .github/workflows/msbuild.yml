@@ -27,26 +27,25 @@ jobs:
     - name: Restore NuGet Packages
       run: nuget restore Textify.sln
 
-    - name: Diagnose restore
-      shell: pwsh
-      run: |
-        "# Restore diagnosis" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-        "packages dir exists: $(Test-Path packages)" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-        if (Test-Path packages) {
-          Get-ChildItem packages -Recurse -Depth 1 -Name | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-        }
-
     - name: Build
       shell: pwsh
       run: |
         msbuild /m /p:Configuration=$env:BUILD_CONFIGURATION /p:Platform=$env:BUILD_PLATFORM Textify.sln /v:n > build.log 2>&1
         $code = $LASTEXITCODE
-        Get-Content build.log | Select-Object -Last 80
         if ($code -ne 0) {
-          "# Build failed (exit $code)" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-          "``````" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-          Select-String -Path build.log -Pattern "error|错误" | Select-Object -First 30 | ForEach-Object { $_.Line } | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-          "``````" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          Write-Output "##[error]msbuild exited with code $code"
+          $errs = Select-String -Path build.log -Pattern "error|错误|fatal" | Select-Object -First 8
+          $i = 0
+          foreach ($e in $errs) {
+            $msg = $e.Line.Trim()
+            if ($msg.Length -gt 500) { $msg = $msg.Substring(0, 500) }
+            Write-Output "##[error]ERR$i: $msg"
+            $i++
+          }
+          if ($errs.Count -eq 0) {
+            Write-Output "##[error]No error lines found; tail of log:"
+            Get-Content build.log -Tail 6 | ForEach-Object { Write-Output "##[error]TAIL: $_" }
+          }
           exit $code
         }
 
